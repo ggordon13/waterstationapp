@@ -8,6 +8,8 @@ function alternatingRowClass(index) {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
+  const [selectedAreaTag, setSelectedAreaTag] = useState("All");
+  const [areaTagOptions, setAreaTagOptions] = useState(["All"]);
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -17,11 +19,66 @@ export default function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [deletingCustomer, setDeletingCustomer] = useState(null);
 
+  const formatDateOnly = (value) => {
+    if (!value) return "—";
+
+    try {
+      return new Date(value).toLocaleDateString();
+    } catch (err) {
+      return "—";
+    }
+  };
+
+  const getDaysSince = (value) => {
+    if (!value) return "No completed order";
+
+    try {
+      const lastOrderDate = new Date(value);
+      const today = new Date();
+      const diffDays = Math.floor((today.getTime() - lastOrderDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) return "Today";
+      return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+    } catch (err) {
+      return "—";
+    }
+  };
+
   const loadCustomers = async () => {
     try {
-      const res = await fetch("/api/customers");
-      const data = await res.json();
-      setCustomers(Array.isArray(data) ? data : []);
+      const [customersRes, ordersRes] = await Promise.all([
+        fetch("/api/customers"),
+        fetch("/api/orders"),
+      ]);
+
+      const customerData = await customersRes.json();
+      const ordersData = await ordersRes.json();
+
+      const normalizedCustomers = Array.isArray(customerData) ? customerData : [];
+      const normalizedOrders = Array.isArray(ordersData) ? ordersData : [];
+
+      const enrichedCustomers = normalizedCustomers.map((customer) => {
+        const normalizedCustomerName = (customer.name || "").trim().toLowerCase();
+
+        const completedOrders = normalizedOrders
+          .filter((order) => order.status === "COMPLETED" && order.completedAt)
+          .filter((order) => {
+            const normalizedOrderCustomer = (order.customer || "").trim().toLowerCase();
+            return normalizedOrderCustomer === normalizedCustomerName;
+          })
+          .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+        return {
+          ...customer,
+          lastOrderDate: completedOrders[0]?.completedAt || null,
+        };
+      });
+
+      setCustomers(enrichedCustomers);
+      setAreaTagOptions([
+        "All",
+        ...Array.from(new Set(normalizedCustomers.map((customer) => customer.tag).filter(Boolean))).sort(),
+      ]);
     } catch (err) {
       console.error("Failed to load customers", err);
     }
@@ -132,10 +189,29 @@ export default function CustomersPage() {
     }
   };
 
+  const filteredCustomers = selectedAreaTag === "All"
+    ? customers
+    : customers.filter((customer) => customer.tag === selectedAreaTag);
+
   return (
     <div className="px-1 py-4 text-slate-900 dark:text-white sm:px-2 lg:px-4">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Customers</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Customers</h1>
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <label htmlFor="area-tag-filter" className="text-sm font-medium text-slate-700 dark:text-slate-200">Area Tag</label>
+            <select
+              id="area-tag-filter"
+              value={selectedAreaTag}
+              onChange={(event) => setSelectedAreaTag(event.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            >
+              {areaTagOptions.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <button
           onClick={() => setShowModal(true)}
           className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 sm:w-auto"
@@ -151,15 +227,22 @@ export default function CustomersPage() {
               <th className="p-3 text-left text-sm font-semibold text-slate-700 dark:text-gray-300">Name</th>
               <th className="p-3 text-left text-sm font-semibold text-slate-700 dark:text-gray-300">Address</th>
               <th className="p-3 text-left text-sm font-semibold text-slate-700 dark:text-gray-300">Area Tag</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-700 dark:text-gray-300">Last Order</th>
               <th className="p-3 text-right text-sm font-semibold text-slate-700 dark:text-gray-300">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {customers.map((c, index) => (
+            {filteredCustomers.map((c, index) => (
               <tr key={c.customerId || c.name} className={`${alternatingRowClass(index)} border-b border-gray-100 dark:border-gray-800`}>
                 <td className="p-3 text-sm">{c.name}</td>
                 <td className="p-3 text-sm">{c.address}</td>
                 <td className="p-3 text-sm">{c.tag}</td>
+                <td className="p-3 text-sm text-slate-700 dark:text-slate-200">
+                  <div className="flex flex-col gap-0.5">
+                    <span>{formatDateOnly(c.lastOrderDate)}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{getDaysSince(c.lastOrderDate)}</span>
+                  </div>
+                </td>
                 <td className="p-3 text-right text-sm">
                   <div className="flex flex-wrap items-center justify-end gap-2">
                   <button

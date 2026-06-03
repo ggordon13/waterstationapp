@@ -92,10 +92,14 @@ export default function HomePage() {
     if (!editingOrder) return closeEdit();
     try {
       const updatedAmount = computeAmount(editForm.mode, editForm.quantity);
+      const nextDeliveredBy = (editForm.mode || "PICKUP").toUpperCase() === "PICKUP"
+        ? "PICKUP"
+        : (editForm.deliveredBy || "");
+
       const res = await fetch("/api/orders", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editingOrder.id, ...editForm, amount: updatedAmount }),
+        body: JSON.stringify({ id: editingOrder.id, ...editForm, deliveredBy: nextDeliveredBy, amount: updatedAmount }),
       });
 
       if (!res.ok) {
@@ -132,12 +136,14 @@ export default function HomePage() {
     closeDelete();
   };
 
-  const saveInlineDriver = async (orderId, driver) => {
+  const saveInlineDriver = async (orderId, driver, mode) => {
+    const nextDriver = (mode || "PICKUP").toUpperCase() === "PICKUP" ? "PICKUP" : driver;
+
     try {
       const res = await fetch("/api/orders", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: orderId, deliveredBy: driver }),
+        body: JSON.stringify({ id: orderId, deliveredBy: nextDriver }),
       });
 
       if (!res.ok) {
@@ -243,11 +249,22 @@ export default function HomePage() {
   const [customers, setCustomers] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [selectedAreaTag, setSelectedAreaTag] = useState("All");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerInputFocused, setCustomerInputFocused] = useState(false);
   const [quantityInput, setQuantityInput] = useState(1);
   const [modeInput, setModeInput] = useState("PICKUP");
   const [addressInput, setAddressInput] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [amountInput, setAmountInput] = useState(30);
+
+  const areaTagOptions = ["All", ...Array.from(new Set(customers.map((customer) => customer.tag).filter(Boolean))).sort()];
+
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesTag = selectedAreaTag === "All" || customer.tag === selectedAreaTag;
+    const matchesSearch = customerSearch.trim() === "" || customer.name?.toLowerCase().includes(customerSearch.trim().toLowerCase());
+    return matchesTag && matchesSearch;
+  });
 
   useEffect(() => {
     // load customers for add modal
@@ -273,6 +290,17 @@ export default function HomePage() {
     setAmountInput(computeAmount(modeInput, quantityInput));
   }, [selectedCustomer, modeInput, quantityInput, customers]);
 
+  const resetAddOrderModal = () => {
+    setSelectedCustomer("");
+    setSelectedAreaTag("All");
+    setCustomerSearch("");
+    setQuantityInput(1);
+    setModeInput("PICKUP");
+    setAddressInput("");
+    setTagInput("");
+    setAmountInput(30);
+  };
+
   const addOrder = async () => {
     if (!selectedCustomer || !quantityInput) {
       alert("Please select customer and quantity");
@@ -287,6 +315,7 @@ export default function HomePage() {
       mode: modeInput,
       mop: "Cash",
       tag: tagInput,
+      deliveredBy: modeInput === "PICKUP" ? "PICKUP" : "",
       status: "PENDING",
       date: new Date().toISOString(),
     };
@@ -302,12 +331,7 @@ export default function HomePage() {
         // refresh orders list
         await loadOrders();
         // reset
-        setSelectedCustomer("");
-        setQuantityInput(1);
-        setModeInput("PICKUP");
-        setAddressInput("");
-        setTagInput("");
-        setAmountInput(30);
+        resetAddOrderModal();
         setShowAddModal(false);
       } else {
         alert(`Error: ${data.error || "Failed to add order"}`);
@@ -345,8 +369,11 @@ export default function HomePage() {
   const driverTotals = useMemo(() => {
     const map = {};
 
-    reportOrders.forEach((order) => {
-      const driver = order.deliveredBy || "Unassigned";
+    relevantTodayOrders.forEach((order) => {
+      const driver = (order.mode || "").toUpperCase() === "PICKUP"
+        ? "PICKUP"
+        : (order.deliveredBy || "Unassigned");
+
       if (!map[driver]) {
         map[driver] = {
           driver,
@@ -362,7 +389,7 @@ export default function HomePage() {
     });
 
     return Object.values(map).sort((a, b) => b.amount - a.amount || b.quantity - a.quantity || a.driver.localeCompare(b.driver));
-  }, [reportOrders]);
+  }, [relevantTodayOrders]);
 
   const handleExportToPdf = async () => {
     if (isExporting) {
@@ -553,18 +580,22 @@ export default function HomePage() {
                       <td className="px-3 py-2 text-slate-400">{formatDateTime(order.createdAt || order.date)}</td>
                       <td className="px-3 py-2 text-slate-400">{formatDateTime(order.completedAt)}</td>
                       <td className="px-3 py-2">
-                        <select
-                          className="rounded bg-slate-800 px-2 py-1 text-slate-100"
-                          value={order.deliveredBy || ""}
-                          onChange={async (e) => {
-                            await saveInlineDriver(order.id, e.target.value);
-                          }}
-                        >
-                          <option value="">-- Select Driver --</option>
-                          <option>Driver1</option>
-                          <option>Driver2</option>
-                          <option>Driver3</option>
-                        </select>
+                        {(order.mode || "PICKUP").toUpperCase() === "PICKUP" ? (
+                          <span className="rounded bg-slate-800 px-2 py-1 text-slate-100">PICKUP</span>
+                        ) : (
+                          <select
+                            className="rounded bg-slate-800 px-2 py-1 text-slate-100"
+                            value={order.deliveredBy || ""}
+                            onChange={async (e) => {
+                              await saveInlineDriver(order.id, e.target.value, order.mode);
+                            }}
+                          >
+                            <option value="">-- Select Driver --</option>
+                            <option>Driver1</option>
+                            <option>Driver2</option>
+                            <option>Driver3</option>
+                          </select>
+                        )}
                       </td>
                       <td className="px-3 py-2">
                         <span className={`inline-flex rounded-full px-2 py-1 text-[0.65rem] font-semibold ${order.status === "PENDING" ? "bg-amber-500/20 text-amber-200" : "bg-emerald-500/20 text-emerald-200"}`}>
@@ -758,15 +789,22 @@ export default function HomePage() {
               </div>
 
               {editForm.status === "COMPLETED" && (
-                <div>
-                  <label className="block text-sm text-slate-300">Delivered By</label>
-                  <select value={editForm.deliveredBy} onChange={(e) => setEditForm(s => ({ ...s, deliveredBy: e.target.value }))} className="mt-1 w-full rounded-md bg-slate-800 px-3 py-2 text-white">
-                    <option value="">-- Select Driver --</option>
-                    <option>Driver1</option>
-                    <option>Driver2</option>
-                    <option>Driver3</option>
-                  </select>
-                </div>
+                editForm.mode === "PICKUP" ? (
+                  <div>
+                    <label className="block text-sm text-slate-300">Delivered By</label>
+                    <p className="mt-1 rounded-md bg-slate-800 px-3 py-2 text-slate-200">PICKUP</p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm text-slate-300">Delivered By</label>
+                    <select value={editForm.deliveredBy} onChange={(e) => setEditForm(s => ({ ...s, deliveredBy: e.target.value }))} className="mt-1 w-full rounded-md bg-slate-800 px-3 py-2 text-white">
+                      <option value="">-- Select Driver --</option>
+                      <option>Driver1</option>
+                      <option>Driver2</option>
+                      <option>Driver3</option>
+                    </select>
+                  </div>
+                )
               )}
             </div>
             <div className="mt-5 flex justify-end gap-3">
@@ -783,18 +821,70 @@ export default function HomePage() {
           <div className="bg-white text-slate-900 dark:bg-gray-900 dark:text-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto shadow-xl border border-gray-200 dark:border-gray-800">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">New Order</h2>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">×</button>
+              <button onClick={() => { resetAddOrderModal(); setShowAddModal(false); }} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">×</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Customer</label>
-                <select value={selectedCustomer} onChange={(e) => setSelectedCustomer(e.target.value)} className="w-full border p-2 rounded bg-white text-black dark:bg-gray-800 dark:text-white dark:border-gray-700">
-                  <option value="">-- Select Customer --</option>
-                  {customers.map((c, idx) => (
-                    <option key={idx} value={c.name}>{c.name}</option>
+                <label className="block text-sm font-medium mb-1">Area Tag</label>
+                <select
+                  value={selectedAreaTag}
+                  onChange={(e) => {
+                    setSelectedAreaTag(e.target.value);
+                    setSelectedCustomer("");
+                    setCustomerSearch("");
+                    setAddressInput("");
+                    setTagInput("");
+                  }}
+                  className="w-full border p-2 rounded bg-white text-black dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                >
+                  {areaTagOptions.map((tagOption) => (
+                    <option key={tagOption} value={tagOption}>{tagOption}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Customer</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={customerSearch}
+                    onFocus={() => setCustomerInputFocused(true)}
+                    onBlur={() => setCustomerInputFocused(false)}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setSelectedCustomer("");
+                      setAddressInput("");
+                      setTagInput("");
+                    }}
+                    placeholder="Type to search customer name"
+                    className="w-full border p-2 rounded bg-white text-black dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                  />
+                  {customerInputFocused && customerSearch.trim() === "" && !selectedCustomer && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      {filteredCustomers.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-300">No matching customers found.</p>
+                      ) : (
+                        filteredCustomers.map((customer) => (
+                          <button
+                            key={customer.customerId || customer.name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomer(customer.name);
+                              setCustomerSearch(customer.name);
+                              setAddressInput(customer.address || "");
+                              setTagInput(customer.tag || "");
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-gray-700"
+                          >
+                            {customer.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -837,7 +927,7 @@ export default function HomePage() {
             </div>
 
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setShowAddModal(false)} className="bg-gray-500 text-white px-4 py-2 rounded font-medium hover:bg-gray-600">Cancel</button>
+              <button onClick={() => { resetAddOrderModal(); setShowAddModal(false); }} className="bg-gray-500 text-white px-4 py-2 rounded font-medium hover:bg-gray-600">Cancel</button>
               <button onClick={addOrder} className="bg-blue-600 text-white px-6 py-2 rounded font-medium hover:bg-blue-700">Add Order</button>
             </div>
           </div>

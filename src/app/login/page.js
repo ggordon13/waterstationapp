@@ -44,7 +44,7 @@ export default function Login() {
   });
 
   if (res.ok) {
-    window.location.href = "/dashboard";
+    window.location.href = "/dashboard/home";
   } else {
     alert("Invalid credentials");
   }

@@ -22,6 +22,9 @@ export default function OrdersPage() {
   const [showDelete, setShowDelete] = useState(false);
   
   const [selectedCustomer, setSelectedCustomer] = useState("");
+  const [selectedAreaTag, setSelectedAreaTag] = useState("All");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerInputFocused, setCustomerInputFocused] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [mode, setMode] = useState("PICKUP");
   const [address, setAddress] = useState("");
@@ -46,6 +49,14 @@ export default function OrdersPage() {
     loadOrders();
   }, []);
 
+  const areaTagOptions = ["All", ...Array.from(new Set(customers.map((customer) => customer.tag).filter(Boolean))).sort()];
+
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesTag = selectedAreaTag === "All" || customer.tag === selectedAreaTag;
+    const matchesSearch = customerSearch.trim() === "" || customer.name?.toLowerCase().includes(customerSearch.trim().toLowerCase());
+    return matchesTag && matchesSearch;
+  });
+
   // Auto-populate address, tag, and calculate amount when customer or mode changes
   useEffect(() => {
     if (selectedCustomer) {
@@ -69,7 +80,7 @@ export default function OrdersPage() {
       customer: selectedCustomer,
       address,
       quantity: Number(quantity),
-      amount: amount * Number(quantity),
+      amount: computeAmount(mode, Number(quantity)),
       mode,
       mop: "Cash",
       tag,
@@ -98,6 +109,8 @@ export default function OrdersPage() {
         
         // Reset form and close modal
         setSelectedCustomer("");
+        setSelectedAreaTag("All");
+        setCustomerSearch("");
         setQuantity("");
         setMode("PICKUP");
         setAddress("");
@@ -117,6 +130,8 @@ export default function OrdersPage() {
     setShowModal(false);
     // Reset form
     setSelectedCustomer("");
+    setSelectedAreaTag("All");
+    setCustomerSearch("");
     setQuantity("");
     setMode("PICKUP");
     setAddress("");
@@ -231,19 +246,64 @@ export default function OrdersPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Customer</label>
+                <label className="block text-sm font-medium mb-1">Area Tag</label>
                 <select
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
-                  className="w-full border p-2 rounded 
-bg-white text-black 
-dark:bg-gray-800 dark:text-white 
-dark:border-gray-700">
-                  <option value="">-- Select Customer --</option>
-                  {customers.map((c, idx) => (
-                    <option key={idx} value={c.name}>{c.name}</option>
+                  value={selectedAreaTag}
+                  onChange={(e) => {
+                    setSelectedAreaTag(e.target.value);
+                    setSelectedCustomer("");
+                    setAddress("");
+                    setTag("");
+                  }}
+                  className="w-full border p-2 rounded bg-white text-black dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                >
+                  {areaTagOptions.map((tagOption) => (
+                    <option key={tagOption} value={tagOption}>{tagOption}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Customer</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={customerSearch}
+                    onFocus={() => setCustomerInputFocused(true)}
+                    onBlur={() => setCustomerInputFocused(false)}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      setSelectedCustomer("");
+                      setAddress("");
+                      setTag("");
+                    }}
+                    placeholder="Type to search customer name"
+                    className="w-full border p-2 rounded bg-white text-black dark:bg-gray-800 dark:text-white dark:border-gray-700"
+                  />
+                  {customerInputFocused && customerSearch.trim() === "" && !selectedCustomer && (
+                    <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      {filteredCustomers.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-300">No matching customers found.</p>
+                      ) : (
+                        filteredCustomers.map((customer) => (
+                          <button
+                            key={customer.customerId || customer.name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomer(customer.name);
+                              setCustomerSearch(customer.name);
+                              setAddress(customer.address || "");
+                              setTag(customer.tag || "");
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-gray-700"
+                          >
+                            {customer.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -306,7 +366,7 @@ dark:border-gray-700"
                 <label className="block text-sm font-medium mb-1">Amount</label>
                 <input
                   type="text"
-                  value={`₱${(amount * (quantity || 1)).toFixed(2)}`}
+                  value={`₱${computeAmount(mode, Number(quantity || 1)).toFixed(2)}`}
                   readOnly
                   className="w-full border p-2 rounded 
 bg-white text-black 
