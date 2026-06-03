@@ -266,6 +266,14 @@ export default function HomePage() {
     return matchesTag && matchesSearch;
   });
 
+  const selectCustomer = (customer) => {
+    setSelectedCustomer(customer.name);
+    setCustomerSearch(customer.name);
+    setAddressInput(customer.address || "");
+    setTagInput(customer.tag || "");
+    setCustomerInputFocused(false);
+  };
+
   useEffect(() => {
     // load customers for add modal
     (async () => {
@@ -870,11 +878,9 @@ export default function HomePage() {
                           <button
                             key={customer.customerId || customer.name}
                             type="button"
-                            onClick={() => {
-                              setSelectedCustomer(customer.name);
-                              setCustomerSearch(customer.name);
-                              setAddressInput(customer.address || "");
-                              setTagInput(customer.tag || "");
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              selectCustomer(customer);
                             }}
                             className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-gray-700"
                           >

@@ -57,6 +57,14 @@ export default function OrdersPage() {
     return matchesTag && matchesSearch;
   });
 
+  const selectCustomer = (customer) => {
+    setSelectedCustomer(customer.name);
+    setCustomerSearch(customer.name);
+    setAddress(customer.address || "");
+    setTag(customer.tag || "");
+    setCustomerInputFocused(false);
+  };
+
   // Auto-populate address, tag, and calculate amount when customer or mode changes
   useEffect(() => {
     if (selectedCustomer) {
@@ -289,11 +297,9 @@ export default function OrdersPage() {
                           <button
                             key={customer.customerId || customer.name}
                             type="button"
-                            onClick={() => {
-                              setSelectedCustomer(customer.name);
-                              setCustomerSearch(customer.name);
-                              setAddress(customer.address || "");
-                              setTag(customer.tag || "");
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              selectCustomer(customer);
                             }}
                             className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-gray-700"
                           >
