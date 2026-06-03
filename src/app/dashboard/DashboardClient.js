@@ -302,15 +302,18 @@ export default function DashboardClient() {
 
   return (
     <div className="text-slate-900 dark:text-slate-100">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <h1 className="text-3xl font-extrabold">Dashboard</h1>
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-300/10 bg-slate-900 p-3">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-4 md:w-full md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-extrabold text-slate-100 sm:text-3xl">Dashboard</h1>
+            <p className="text-xs uppercase tracking-[0.25em] text-sky-300/80 md:hidden">Operations Overview</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-300/10 bg-slate-900 p-3 md:flex-nowrap md:justify-end">
             <label className="text-sm text-slate-400">Show:</label>
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 sm:w-auto"
             >
               <option value="date">Date</option>
               <option value="week">Week</option>
@@ -323,7 +326,7 @@ export default function DashboardClient() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 sm:w-auto"
               />
             )}
             {period === "week" && (
@@ -331,7 +334,7 @@ export default function DashboardClient() {
                 type="week"
                 value={selectedWeek}
                 onChange={(e) => setSelectedWeek(e.target.value)}
-                className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 sm:w-auto"
               />
             )}
             {period === "month" && (
@@ -339,7 +342,7 @@ export default function DashboardClient() {
                 type="month"
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(e.target.value)}
-                className="rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 sm:w-auto"
               />
             )}
             {period === "year" && (
@@ -349,7 +352,7 @@ export default function DashboardClient() {
                 max="2100"
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(e.target.value)}
-                className="w-24 rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+                className="w-full rounded-full border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 sm:w-24"
               />
             )}
           </div>
@@ -358,7 +361,7 @@ export default function DashboardClient() {
         <button
           onClick={handleExportPdf}
           disabled={isExporting}
-          className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          className="inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-300 md:w-auto"
         >
           {isExporting ? "Exporting..." : "Export to PDF"}
         </button>
@@ -366,7 +369,7 @@ export default function DashboardClient() {
 
       <p className="mt-3 text-sm text-slate-500">Showing {period} range: {rangeLabel}</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard title="Total Revenue" value={`₱${totalRevenue.toLocaleString()}`} tone="emerald" />
         <StatCard title="Total Orders" value={totalOrders} tone="indigo" />
         <StatCard title="Active Customers" value={activeCustomers} tone="blue" />
@@ -390,7 +393,7 @@ export default function DashboardClient() {
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="bg-slate-950 text-slate-100 p-6 rounded-xl shadow">
           <h4 className="font-semibold mb-3">Quantity per Area / Tag</h4>
           <table className="w-full text-sm">

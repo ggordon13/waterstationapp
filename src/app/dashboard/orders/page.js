@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 
+function alternatingRowClass(index) {
+  return index % 2 === 0 ? "bg-slate-50 dark:bg-slate-950" : "bg-white dark:bg-slate-900/80";
+}
+
 function computeAmount(mode, quantity) {
   const qty = Number(quantity) || 0;
   return (mode === "DELIVERY" ? 35 : 30) * qty;
@@ -200,12 +204,12 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="text-slate-900 dark:text-white">
-      <div className="flex justify-between items-center mb-6">
+    <div className="px-1 py-4 text-slate-900 dark:text-white sm:px-2 lg:px-4">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Orders</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded font-medium hover:bg-blue-700"
+          className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 sm:w-auto"
         >
           + Add New Order
         </button>
@@ -213,8 +217,8 @@ export default function OrdersPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white text-slate-900 dark:bg-gray-900 dark:text-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto shadow-xl border border-gray-200 dark:border-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-gray-200 bg-white p-6 text-slate-900 shadow-xl dark:border-gray-800 dark:bg-gray-900 dark:text-white">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">New Order</h2>
               <button
@@ -340,7 +344,8 @@ dark:border-gray-700"
         </div>
       )}
 
-      <table className="w-full bg-white dark:bg-gray-900 rounded-lg overflow-hidden border">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <table className="min-w-[980px] w-full overflow-hidden rounded-lg">
         <thead>
           <tr className="border-b dark:border-gray-800 bg-gray-50 dark:bg-gray-800">
             <th className="p-3 text-left">Customer</th>
@@ -359,7 +364,7 @@ dark:border-gray-700"
 
         <tbody>
           {orders.map((order, index) => (
-            <tr key={index} className="border-b dark:border-gray-800">
+            <tr key={index} className={`${alternatingRowClass(index)} border-b dark:border-gray-800`}>
               <td className="p-3">{order.customer}</td>
               <td className="p-3">{order.address}</td>
               <td className="p-3">{order.quantity}</td>
@@ -381,7 +386,7 @@ dark:border-gray-700"
               <td className="p-3">{order.completedAt ? new Date(order.completedAt).toLocaleString() : "—"}</td>
               <td className="p-3">{new Date(order.date).toLocaleString()}</td>
               <td className="p-3">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button onClick={() => openEdit(order)} className="rounded-md bg-sky-600 px-3 py-1 text-xs font-medium text-white hover:bg-sky-500">Edit</button>
                   <button onClick={() => openDelete(order)} className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500">Delete</button>
                 </div>
@@ -390,16 +395,17 @@ dark:border-gray-700"
           ))}
         </tbody>
       </table>
+      </div>
       {/* Edit modal */}
       {showEdit && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 dark:bg-gray-900">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Edit Order</h3>
             <div className="mt-4 space-y-3">
               <label className="block text-sm text-slate-700 dark:text-slate-300">Customer</label>
               <input value={editForm.customer} onChange={(e) => setEditForm(s => ({ ...s, customer: e.target.value }))} className="w-full rounded-md bg-gray-100 dark:bg-gray-800 px-3 py-2 text-slate-900 dark:text-white" />
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm text-slate-700 dark:text-slate-300">Mode</label>
                   <select value={editForm.mode} onChange={(e) => setEditForm(s => ({ ...s, mode: e.target.value }))} className="mt-1 w-full rounded-md bg-gray-100 dark:bg-gray-800 px-3 py-2 text-slate-900 dark:text-white">
@@ -416,7 +422,7 @@ dark:border-gray-700"
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm text-slate-700 dark:text-slate-300">Qty</label>
                   <input type="number" value={editForm.quantity} min={1} onChange={(e) => setEditForm(s => ({ ...s, quantity: Number(e.target.value) }))} className="mt-1 w-full rounded-md bg-gray-100 dark:bg-gray-800 px-3 py-2 text-slate-900 dark:text-white" />
@@ -440,8 +446,8 @@ dark:border-gray-700"
 
       {/* Delete confirm modal */}
       {showDelete && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 dark:bg-gray-900">
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Confirm delete</h3>
             <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">Are you sure you want to delete this order? This action cannot be undone.</p>
             <div className="mt-5 flex justify-end gap-3">
