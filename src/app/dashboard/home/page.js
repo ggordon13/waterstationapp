@@ -861,7 +861,7 @@ export default function HomePage() {
                     placeholder="Type to search customer name"
                     className="w-full border p-2 rounded bg-white text-black dark:bg-gray-800 dark:text-white dark:border-gray-700"
                   />
-                  {customerInputFocused && customerSearch.trim() === "" && !selectedCustomer && (
+                  {customerInputFocused && !selectedCustomer && (
                     <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
                       {filteredCustomers.length === 0 ? (
                         <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-300">No matching customers found.</p>
